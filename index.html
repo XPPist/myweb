@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>无人机集群手势控制飞行交互设计</title>
+    <meta
+      name="description"
+      content="面向密林侦察打击场景的无人机集群交互设计：用手势+AR界面+实体按键+语音，从“操纵”升级为“指挥”。"
+    />
+    <link rel="stylesheet" href="./myweb/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#hero" aria-label="回到首页">
+        <span class="brand-mark" aria-hidden="true">D</span>
+        <span class="brand-name">Drone Swarm</span>
+      </a>
+    </header>
+
+    <aside id="toc" class="toc" aria-label="页面目录" data-open="false">
+      <div class="toc-title">目录 <span id="toc-progress" class="toc-progress">1/1</span></div>
+      <nav class="toc-links">
+        <a href="#hero">概览</a>
+        <a href="#scenario">场景与任务</a>
+        <a href="#challenges">问题与挑战</a>
+        <a href="#interaction">交互策略</a>
+        <a href="#flow">任务流程</a>
+        <a href="#ar-ui">AR 界面</a>
+        <a href="#tech">技术说明</a>
+        <a href="#roadmap">迭代方向</a>
+        <a href="#links">链接</a>
+      </nav>
+    </aside>
+
+    <button class="toc-fab" type="button" aria-expanded="false" aria-controls="toc" aria-label="打开目录">
+      目录
+    </button>
+
+    <button id="next-section" class="next-section" type="button" aria-label="下一部分">↓</button>
+
+    <main id="top" class="container">
+      <section id="hero" class="hero">
+        <div class="hero-content">
+          <p class="badge">交互设计｜无人机集群控制</p>
+          <h1>无人机集群手势控制飞行交互设计</h1>
+          <p class="lead">
+            面向“微型无人机集群密林侦察打击”场景：操作手佩戴 AR 眼镜并保持持枪警戒，通过手势完成模式切换、队形变换与参数设定，
+            再用右手进行实时姿态控制；致命/不可逆操作交由实体按键作为安全阈值。
+          </p>
+          <div class="cta">
+            <a class="btn primary" href="#scenario">查看场景</a>
+            <a class="btn" href="#links">项目链接</a>
+          </div>
+          <div class="meta">
+            <div class="meta-item">
+              <div class="meta-k">场景</div>
+              <div class="meta-v">密林侦察打击</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-k">多模态</div>
+              <div class="meta-v">手势 + AR + 按键 + 语音</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-k">实现</div>
+              <div class="meta-v">UE + AirSim / MediaPipe</div>
+            </div>
+          </div>
+          <div class="team">
+            <div class="team-title">项目成员</div>
+            <div class="team-list" aria-label="项目成员列表">
+              <span class="team-chip">丁艺沄</span>
+              <span class="team-chip">李欣墨</span>
+              <span class="team-chip">袁蒙悦</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-aside">
+          <div class="hero-panel" role="img" aria-label="项目信息卡片">
+            <div class="panel-card">
+              <div class="panel-title">从“操纵”到“指挥”</div>
+              <div class="panel-subtitle">用拟态手势把队形与趋势变成直觉动作</div>
+              <div class="panel-stats">
+                <div class="stat">
+                  <div class="stat-k">集群规模</div>
+                  <div class="stat-v">3 架四旋翼</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-k">关键机制</div>
+                  <div class="stat-v">锁定 + 急停</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-k">更新</div>
+                  <div class="stat-v" id="last-updated">—</div>
+                </div>
+              </div>
+              <div class="panel-actions">
+                <button class="btn small" type="button" id="copy-link">复制项目链接</button>
+                <a class="btn small ghost" href="#interaction">交互速览</a>
+              </div>
+            </div>
+          </div>
+          <figure class="hero-figure" aria-label="封面插图">
+            <img src="./myweb/assets/images/wallhaven-lmv6er.jpg" alt="无人机集群飞行插图" decoding="async" />
+          </figure>
+        </div>
+        <div class="hero-overview">
+          <h2>概览</h2>
+          <div class="grid-2">
+            <div class="card">
+              <h3>任务与约束</h3>
+              <p>
+                操作手既是无人机飞手也是战斗员，需要始终保持持枪警戒，无法长时间低头盯屏或进行繁琐按键组合；但又要对多机队形、避障与协同做出毫秒级响应。
+              </p>
+            </div>
+            <div class="card">
+              <h3>设计机会</h3>
+              <p>
+                将对“三维坐标”的精细操纵，抽象为对“形状”和“趋势”的高级指令：用拟态手势完成队形切换与参数设定，指令锁定后放下双手，回到战术姿态。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scenario" class="section">
+        <h2>场景与任务</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>角色配置</h3>
+            <div class="list">
+              <div class="list-item">
+                <div class="list-k">操作手（1名）</div>
+                <div class="list-v">主控无人机，佩戴 AR 眼镜，携带控制设备、通讯设备与枪械</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">警戒员（3–4名）</div>
+                <div class="list-v">近身掩护，物理距离约 3–5 米</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">无人机集群</div>
+                <div class="list-v">三架小型四旋翼：侦察 / 中继 / 打击协同</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>任务阶段</h3>
+            <div class="list">
+              <div class="list-item">
+                <div class="list-k">冷启动与狭窄地形通过</div>
+                <div class="list-v">盲操启动、视野自检、纵队通过、自动前进</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">行进间机动与越障</div>
+                <div class="list-v">提速突进、跨越巨木、路径修正</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">遭遇威胁与生存反应</div>
+                <div class="list-v">横向广域搜索、握拳急停、张掌恢复</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">目标确认与精确打击</div>
+                <div class="list-v">悬停 PID、语音选机、末端制导、实体按键终结</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="challenges" class="section">
+        <h2>问题与挑战</h2>
+        <div class="grid-2">
+          <div class="feature">
+            <div class="feature-title">环境复杂性</div>
+            <div class="feature-desc">密林遮挡与障碍密集，传统摇杆难兼顾多机空间位置与姿态。</div>
+          </div>
+          <div class="feature">
+            <div class="feature-title">注意力分散</div>
+            <div class="feature-desc">操作手必须持枪警戒，无法长时间低头盯屏或执行复杂输入。</div>
+          </div>
+          <div class="feature">
+            <div class="feature-title">集群维度爆炸</div>
+            <div class="feature-desc">从单机 6DoF 到多机队形与协同，传统交互指令组合过多。</div>
+          </div>
+          <div class="feature">
+            <div class="feature-title">安全与误触</div>
+            <div class="feature-desc">米达斯接触、视觉遮挡与低照度导致误识别，致命操作必须有安全阈值。</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="interaction" class="section">
+        <h2>核心交互策略</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>设计原则</h3>
+            <div class="list">
+              <div class="list-item">
+                <div class="list-k">拟态直觉</div>
+                <div class="list-v">队形用双手“画形状”，把抽象参数变成所见即所得动作</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">离散后锁定</div>
+                <div class="list-v">指令确认后自动锁定状态，放下双手仍能保持巡航/队形</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">高优先级急停</div>
+                <div class="list-v">利用“紧张握拳”本能作为最高优先级中断（生存挂起）</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">多模态安全阈值</div>
+                <div class="list-v">不可逆/致命操作交给实体按键；语音用于选机等低负担输入</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>优势与约束</h3>
+            <div class="list">
+              <div class="list-item">
+                <div class="list-k">认知映射一致</div>
+                <div class="list-v">3D 对 3D：手势天然同构无人机空间运动，降低学习门槛</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">宏观控制高效</div>
+                <div class="list-v">控制“形状与趋势”而不是每架飞机，提升集群指挥效率</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">疲劳与精度问题</div>
+                <div class="list-v">避免大幅度悬空操作，核心交互区在腰肩之间；精确量化改用参数档位</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">误触与干扰</div>
+                <div class="list-v">加入时域一致性校验（连续帧确认）与锁定/解锁状态机</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card spaced">
+          <h3>手势指令速查</h3>
+          <button class="btn" type="button" data-popover-image="./myweb/assets/images/image1.png">查看手势指令图</button>
+        </div>
+      </section>
+
+      <section id="flow" class="section">
+        <h2>具体任务流程（摘要）</h2>
+        <ol class="timeline">
+          <li class="timeline-item">
+            <div class="timeline-title">01 盲操启动（实体按键）</div>
+            <div class="timeline-desc">触摸战术板并按下电源/起飞键，三机低噪起飞，HUD 自检完成。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">02 视野自检（滚轮）</div>
+            <div class="timeline-desc">拨动滚轮循环切换 1/2/3 号机与多机分屏，快速检查遮挡。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">03 队形重构：纵队（手势离散）</div>
+            <div class="timeline-desc">左手剑指 ✌️ 触发纵向一字编队，通过林缘狭窄植被缝隙。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">04 自动前进：巡航（手势离散）</div>
+            <div class="timeline-desc">左手 L 型进入巡航，放下手继续飞行，操作手专注脚下绊线与战术方向。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">05 提速突进（双手组合）</div>
+            <div class="timeline-desc">左手 🤟 + 右手数字设置速度档位，在开阔河床快速通过减少暴露。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">06 越障（右手实时 Pitch）</div>
+            <div class="timeline-desc">保持巡航速度不变，右手上翘爬升飞越倒木，回正后锁定高度。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">07 路径修正（右手实时 Yaw）</div>
+            <div class="timeline-desc">右手左右偏转控制机头朝向，在河道弯曲地形中顺势通过。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">08 广域搜索：横队（拟态）</div>
+            <div class="timeline-desc">双手食指相对 👉👈 触发横向一字，最大化横向侦察覆盖。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">09 生存挂起：握拳急停（最高优先级）</div>
+            <div class="timeline-desc">侧翼动静触发本能握拳 ✊，无人机急刹悬停，AR 透明/消失以保证射击视野。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">10 状态恢复：张掌解锁</div>
+            <div class="timeline-desc">确认安全后张开全掌 ✋，AR 重新浮现并无缝接管悬停无人机。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">11 静默侦察：悬停 PID</div>
+            <div class="timeline-desc">左手 👍 进入悬停，画面稳定便于热成像身份确认。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">12 单机分离（语音辅助）</div>
+            <div class="timeline-desc">轻声说出代号选中 1 号机，其余无人机保持悬停做观察/中继。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">13 末端制导（模式+实时复合）</div>
+            <div class="timeline-desc">左手 L 型激活巡航，右手下压俯冲，实现最后几秒的准星对齐。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">14 物理终结（实体按键安全阀）</div>
+            <div class="timeline-desc">掀开保护盖并按下打击/开火键，杜绝手势/语音误判导致误炸。</div>
+          </li>
+          <li class="timeline-item">
+            <div class="timeline-title">15 一键撤离（实体按键）</div>
+            <div class="timeline-desc">长按电源键或双击返航键完成撤离逻辑（可扩展为返航/降落）。</div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="ar-ui" class="section">
+        <h2>AR 界面设计要点</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>核心原则</h3>
+            <div class="list">
+              <div class="list-item">
+                <div class="list-k">中心视野绝对清晰</div>
+                <div class="list-v">不遮挡射击与路径判断，反馈短促明确，1–2 秒后消失</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">上下文感知显示</div>
+                <div class="list-v">只显示当前任务/模式最相关信息：例如选机时才高亮目标机</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">低光适应</div>
+                <div class="list-v">单色 HUD（绿/青/琥珀）减少大面积亮块，保护夜视能力</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">紧急情况优先</div>
+                <div class="list-v">链路丢失、即将碰撞、电池耗尽、武器发射等优先级最高</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>紧急等级示例</h3>
+            <div class="list">
+              <div class="list-item">
+                <div class="list-k">一级</div>
+                <div class="list-v">控制链路丢失 / 即将碰撞 / 电池耗尽或无法返航 / 武器系统发射</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">二级</div>
+                <div class="list-v">电量偏低 / 目标丢失</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">辅助交互</div>
+                <div class="list-v">滚轮切换视野；按下滚轮确认动作；语音用于选机出列等扩展指令</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tech" class="section">
+        <h2>技术说明（摘要）</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>仿真平台：UE + AirSim</h3>
+            <div class="list">
+              <div class="list-item">
+                <div class="list-k">领航机模式</div>
+                <div class="list-v">指定 Drone1 为领航机，其位置由手势控制</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">僚机控制</div>
+                <div class="list-v">在 ROS 节点中根据队形实时计算 Drone2/3 相对期望位置</div>
+              </div>
+            </div>
+            <figure class="media-frame" aria-label="仿真平台示意图">
+              <img src="./myweb/assets/images/image4.png" alt="UE + AirSim 仿真平台示意图" decoding="async" />
+            </figure>
+          </div>
+          <div class="card">
+            <h3>手势识别：MediaPipe + 滤波</h3>
+            <div class="list">
+              <div class="list-item">
+                <div class="list-k">关键点</div>
+                <div class="list-v">实时检测 21 个手部关键点，利用手腕与指根构建手掌平面解算姿态</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">防抖确认</div>
+                <div class="list-v">引入连续帧一致性阈值（示例：10 帧）避免过渡动作误触发</div>
+              </div>
+              <div class="list-item">
+                <div class="list-k">坐标映射</div>
+                <div class="list-v">Pitch 映射升降，Yaw 映射左右转向，并通过死区实现高度保持</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="roadmap" class="section">
+        <h2>迭代方向</h2>
+        <div class="roadmap-grid">
+          <div class="roadmap-col">
+            <div class="timeline-item">
+              <div class="timeline-title">测试评估</div>
+              <div class="timeline-desc">围绕易识性、易学性/易记性与疲劳度等指标进行评估与优化。</div>
+              <figure class="media-frame" aria-label="测试评估示意图">
+                <img src="./myweb/assets/images/image5.png" alt="测试评估示意图" decoding="async" />
+              </figure>
+            </div>
+          </div>
+          <div class="roadmap-col">
+            <div class="timeline-item">
+              <div class="timeline-title">三机 → N 机集群扩展</div>
+              <div class="timeline-desc">从三机编队推广到更多无人机的队形控制与协同策略。</div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-title">飞行算法与传感器优化</div>
+              <div class="timeline-desc">改进队形与避障算法，并探索穿戴式传感器替代视觉摄像头。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="links" class="section">
+        <h2>链接</h2>
+        <div class="card">
+          <p>项目相关资源（来自文档）：</p>
+          <div class="contact-grid">
+            <div class="contact-item">
+              <div class="contact-k">GitHub</div>
+              <a
+                class="contact-v"
+                href="https://github.com/PppPbb/DroneSwarmGestureControl/tree/UE-Airsim_project"
+                target="_blank"
+                rel="noreferrer"
+              >
+                DroneSwarmGestureControl
+              </a>
+            </div>
+            <div class="contact-item">
+              <div class="contact-k">最终演示视频</div>
+              <a
+                class="contact-v"
+                href="https://www.yuque.com/attachments/yuque/0/2026/mp4/46067980/1767677487705-8ed1a47f-d93c-439a-9ddb-a6c93c053838.mp4"
+                target="_blank"
+                rel="noreferrer"
+              >
+                最终演示视频.mp4
+              </a>
+            </div>
+            <div class="contact-item">
+              <div class="contact-k">说明文档</div>
+              <a class="contact-v" href="./myweb/material/Project_doc.md">
+                Project_doc.md
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>© <span id="year"></span> Drone Swarm Gesture Control</span>
+        <a href="#top">返回顶部</a>
+      </div>
+    </footer>
+
+    <script src="./myweb/script.js"></script>
+  </body>
+</html>
